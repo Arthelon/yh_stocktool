@@ -24,13 +24,17 @@ s6 - Revenue
 n - Name
 
 '''
-import requests, sys, csv, re, datetime
+import requests, sys, csv, re, datetime, os
 from docopt import docopt
 from peewee import *
 from collections import OrderedDict
 from clint.textui import puts, prompt
 
-db = SqliteDatabase('stock_data.db')
+
+__version__ = '0.0.1'
+
+path = os.getenv('HOME', os.path.expanduser('~')) + '/.yh_stocktool'
+db = SqliteDatabase(path+'/stock_data.db')
 
 
 class Company(Model):
@@ -64,26 +68,15 @@ def list_data():
         stocks_data = Stock.select()
     else:
         stocks_data = Stock.select().join(Company).where(Stock.company == company)
-    puts('Company :: P/E ratio :: Ask price :: Day High :: Day Low :: Revenue :: Timestamp')
-    for stock in stocks_data:
-        puts('{0} | {1} | {2} | {3} | {4} | {5} | {6}'.format(
-            stock.company.name, stock.pe_ratio,stock.ask_price, stock.day_high,
-            stock.day_low, stock.revenue, stock.timestamp
-        ))
-
-
-def remove_company():
-    sym = prompt.options('Enter corporation name/symbol:', get_company_options())
-    if not sym:
-        puts('Exited')
-    elif sym == '*':
-        Company.delete().execute()
-        puts('All companies removed')
+    if not stocks_data:
+        puts('No stock records found')
     else:
-        for company in Company.select():
-            if sym in company.id or sym in company.name:
-                puts("'{:s}' deleted".format(company.name))
-                company.delete_instance()
+        puts('Company :: P/E ratio :: Ask price :: Day High :: Day Low :: Revenue :: Timestamp')
+        for stock in stocks_data:
+            puts('{0} | {1} | {2} | {3} | {4} | {5} | {6}'.format(
+                stock.company.name, stock.pe_ratio,stock.ask_price, stock.day_high,
+                stock.day_low, stock.revenue, stock.timestamp
+            ))
 
 
 def list_companies():
@@ -112,7 +105,9 @@ def add_company():
 
 
 def add_data():
-    companies = Company.select().order_by(Company.id).iterator()
+    companies = Company.select().order_by(Company.id)
+    if not companies:
+        print('No company entries found')
     fields = ['ask_price', 'pe_ratio', 'day_high', 'day_low', 'revenue', 'company']
     for i in companies:
         data = get_data({
@@ -122,6 +117,23 @@ def add_data():
         data.append(i.id)
         s = Stock.create(**dict(zip(fields, data)))
         puts('{:s} stock quote record added'.format(s.company.id.upper()))
+
+
+def remove_company():
+    sym = prompt.options('Enter corporation name/symbol:', get_company_options())
+    if not sym:
+        puts('Exited')
+    elif sym == '*':
+        Company.delete().execute()
+        Stock.delete().execute()
+        puts('All companies removed')
+    else:
+        for company in Company.select(Company, Stock).join(Stock).where(Stock.company == Company.id):
+            for stock in company.company_stock:
+                stock.delete_instance()
+            if sym in company.id or sym in company.name:
+                puts("'{:s}' deleted".format(company.name))
+                company.delete_instance()
 
 
 def remove_data():
@@ -159,15 +171,9 @@ def get_company_options():
     return formatted_company_list
 
 
-def init():
-    args = docopt(__doc__)
-    if args['-m']:
-        monitoring_process()
-    else:
-        main_process(args)
-
-
 def monitoring_process():
+    if not os.path.exists(path):
+        os.makedirs(path)
     db.connect()
     db.create_tables([Stock, Company], safe=True)
     user_inp = prompt.query('Enter Commands (h for help)\n>> ')
@@ -179,9 +185,17 @@ def monitoring_process():
         puts()
         user_inp = prompt.query('Enter Commands (h for help)\n>> ')
     db.close()
+    
+
+def init():
+    args = docopt(__doc__)
+    if args['-m']:
+        monitoring_process()
+    else:
+        stock_data_process(args)
 
 
-def main_process(params):
+def stock_data_process(params):
     data = get_data(process_args(params))
     header = [options_list[i] for i in parse_options(params['f'])]
     puts(' | '.join(header))
@@ -204,13 +218,9 @@ def process_args(arguments):
             break
     else:
         payload['s'] = ' '.join(arguments['SYMBOLS'])
-        main_process(payload)
+        stock_data_process(payload)
         return
-    exit_program('Invalid options')
-
-
-def exit_program(error_msg):
-    sys.exit(error_msg)
+    sys.exit('Invalid options')
 
 
 def format_results(data):
@@ -231,6 +241,11 @@ def get_data(options):
         exit_program('Warning, No content returned. Company symbol may be invalid')
     text = req.text.splitlines()
     return format_results(next(csv.reader(text)))
+
+
+def exit_program(error_msg):
+    puts(error_msg)
+    sys.exit(0)
 
 
 monitor_commands = OrderedDict([
