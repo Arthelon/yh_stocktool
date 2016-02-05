@@ -2,7 +2,7 @@
   
 Simple command line utility that retrieves and stores stock data, created using the 
 [Yahoo Finance API](http://www.jarloo.com/yahoo_finance/)
-and while learning web scraping and [Peewee](https://github.com/coleifer/peewee)
+while learning web scraping and [Peewee](https://github.com/coleifer/peewee)
 
 ### To-do:
 
@@ -12,7 +12,7 @@ and while learning web scraping and [Peewee](https://github.com/coleifer/peewee)
 - [ ] Add more stock data options
 - [ ] Implement better UI with clint
 - [ ] Allow pip installation
-- [ ] Encrypt database using [**SQLCipher**]
+- [ ] Encrypt database using [**SQLCipher**](https://www.zetetic.net/sqlcipher/)
 - [ ] Refactor code, renaming and the such
 - [ ] Update markdown to include demo/example usage
 
