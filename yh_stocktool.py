@@ -1,34 +1,21 @@
 #!/usr/bin/env python3
 '''
 Usage: yh_stocktool.py OPTIONS --s SYMBOLS...
+       yh_stocktool.py -o
        yh_stocktool.py -m
 
 Options:
     SYMBOLS...  Corporation stock symbols
     OPTIONS     String containing options for financial data
     -m          Toggle monitoring mode
-
-Financial Data Options:
-a - Ask price
-b - Bid price
-e - EPS (Earnings per share)
-r - P/E ratio
-y - Dividend yield
-d - Dividend per share
-p - Previous close
-h - Day's high
-l - Day's low
-k - Week's high
-j - Week's low
-s6 - Revenue
-n - Name
+    -o          Print financial data options
 
 '''
 import requests, sys, csv, re, datetime, os
 from docopt import docopt
 from peewee import *
 from collections import OrderedDict
-from clint.textui import puts, prompt
+from clint.textui import puts, prompt, columns
 
 
 __version__ = '0.0.1'
@@ -191,6 +178,8 @@ def init():
     args = docopt(__doc__)
     if args['-m']:
         monitoring_process()
+    elif args['-o']:
+        print_options()
     else:
         stock_data_process(args)
 
@@ -243,9 +232,18 @@ def get_data(options):
     return format_results(next(csv.reader(text)))
 
 
+def print_options():
+    option_w = 6
+    func_w = 30
+    puts(columns(['Option', option_w], ['Function', func_w]))
+    for option in options_list.items():
+        puts(columns([option[0], option_w], [option[1], func_w]))
+
+
 def exit_program(error_msg):
     puts(error_msg)
     sys.exit(0)
+
 
 
 monitor_commands = OrderedDict([
