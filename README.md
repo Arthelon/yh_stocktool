@@ -6,9 +6,13 @@ while learning web scraping and [Peewee](https://github.com/coleifer/peewee)
 
 ### Installation
 
-1. `$ git clone https://github.com/arthelon/yh_stocktool`
-2. `$ cd yh_stocktool && pip install -r requirements.txt`
+`pip install https://github.com/Arthelon/yh_stocktool/archive/master.zip`
 
+OR
+
+1. `git clone https://github.com/Arthelon/yh_stocktool`
+2. `cd yh_stocktool/`
+3. `python setup.py install`
 
 ### To-do:
 
@@ -16,8 +20,8 @@ while learning web scraping and [Peewee](https://github.com/coleifer/peewee)
 - [ ] Add colorized text
 - [ ] Annotate Code
 - [x] Add more stock data options
-- [ ] Implement better UI with clint
-- [ ] Allow pip installation
+- [X] Implement better UI with clint
+- [X] Allow pip installation
 - [ ] Refactor code, renaming and the such
 - [ ] Update markdown to include demo/example usage
 
