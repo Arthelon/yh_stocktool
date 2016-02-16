@@ -1,24 +1,9 @@
 #!/usr/bin/env python3
-'''
-Usage: yh_stocktool.py OPTIONS --s SYMBOLS...
-       yh_stocktool.py -o
-       yh_stocktool.py -m
-
-Options:
-    SYMBOLS...  Corporation stock symbols
-    OPTIONS     String containing options for financial data
-    -m          Toggle monitoring mode
-    -o          Print financial data options
-
-'''
-import requests, sys, csv, re, datetime, os
-from docopt import docopt
+import requests, sys, re, datetime, os, click, csv
 from peewee import *
 from collections import OrderedDict
 from clint.textui import puts, prompt, columns
 
-
-__version__ = '0.0.1'
 
 path = os.getenv('HOME', os.path.expanduser('~')) + '/.yh_stocktool'
 db = SqliteDatabase(path+'/stock_data.db')
@@ -158,7 +143,14 @@ def get_company_options():
     return formatted_company_list
 
 
-def monitoring_process():
+@click.group()
+def main():
+    pass
+
+
+@main.command('m')
+def monitor():
+    ''' Toggle monitoring mode '''
     if not os.path.exists(path):
         os.makedirs(path)
     db.connect()
@@ -172,21 +164,15 @@ def monitoring_process():
         puts()
         user_inp = prompt.query('Enter Commands (h for help)\n>> ')
     db.close()
-    
-
-def init():
-    args = docopt(__doc__)
-    if args['-m']:
-        monitoring_process()
-    elif args['-o']:
-        print_options()
-    else:
-        stock_data_process(args)
 
 
-def stock_data_process(params):
-    data = get_data(process_args(params))
-    header = [options_list[i] for i in parse_options(params['f'])]
+@main.command('get')
+@click.argument('option_string', type=click.STRING)
+@click.argument('companies', type=click.STRING, nargs=-1, required=True)
+def stock_data_process(option_string, companies):
+    ''' Retrieve stock quotes on desired corporations '''
+    data = get_data(process_args(option_string, companies))
+    header = [options_list[i] for i in parse_options(option_string)]
     puts(' | '.join(header))
     for line in data:
         puts(' | '.join(line))
@@ -195,44 +181,46 @@ def stock_data_process(params):
 def parse_options(option_str):
     options = re.findall(r'\w\d?', option_str)
     for option in options:
-        yield option
+        yield option.lower()
 
 
-def process_args(arguments):
-    payload = {'f': 'n'}
-    for option in parse_options(arguments['OPTIONS']):
-        if option.lower() in dict(options_list):
+def process_args(option_str, companies):
+    payload = {'f': ''}
+    for option in parse_options(option_str):
+        if option in dict(options_list):
             payload['f'] += option
         else:
-            break
-    else:
-        payload['s'] = ' '.join(arguments['SYMBOLS'])
-        stock_data_process(payload)
-        return
-    sys.exit('Invalid options')
+            puts('Invalid option detected {:s}'.format(option))
+            continue
+    payload['s'] = '+'.join(companies)
+    return payload
 
 
 def format_results(data):
-    for i, item in enumerate(data):
+    payload = list()
+    for item in data:
         if item == 'N/A':
-            data[i] = None
-    return data
+            item = None
+        payload.append(item)
+    return payload
 
 
 def get_data(options):
     base = 'http://finance.yahoo.com/d/quotes.csv'
-    req = requests.get(base, params=options)
     try:
+        req = requests.get(base, params=options)
         req.raise_for_status()
     except requests.exceptions.HTTPError:
         exit_program('Error Occurred')
-    if not req.text.rstrip():
+    if not req.text.strip():
         exit_program('Warning, No content returned. Company symbol may be invalid')
-    text = req.text.splitlines()
-    return format_results(next(csv.reader(text)))
+    text = csv.reader(req.text.split('\n'))
+    return format_results(text)
 
 
+@main.command('o')
 def print_options():
+    ''' Print financial data options '''
     option_w = 6
     func_w = 30
     puts(columns(['Option', option_w], ['Function', func_w]))
@@ -243,7 +231,6 @@ def print_options():
 def exit_program(error_msg):
     puts(error_msg)
     sys.exit(0)
-
 
 
 monitor_commands = OrderedDict([
@@ -272,7 +259,4 @@ options_list = {'a': 'Ask price',
 }
 
 if __name__ == '__main__':
-    try:
-        init()
-    except KeyboardInterrupt:
-        puts('Stopped by Keyboard Interrupt')
+    main()
