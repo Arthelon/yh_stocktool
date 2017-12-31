@@ -1,14 +1,14 @@
 # yh_stocktool
   
-Simple command line utility that retrieves and stores stock data, created using the 
+Simple command line utility that retrieves and stores stock data. Created using the 
 [Yahoo Finance API](http://www.jarloo.com/yahoo_finance/)
-while learning web scraping and [Peewee](https://github.com/coleifer/peewee)
+while learning about web scraping and [Peewee](https://github.com/coleifer/peewee)
 
 ### Installation
 
 `pip install https://github.com/Arthelon/yh_stocktool/archive/master.zip`
 
-OR
+**OR**
 
 1. `git clone https://github.com/Arthelon/yh_stocktool`
 2. `cd yh_stocktool/`
